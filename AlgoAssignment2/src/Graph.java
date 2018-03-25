@@ -106,8 +106,7 @@ public class Graph implements Program2{
 	// Do not change its parameters or return type.
 	public int findTimeOptimalPath(int sourcePort, int destPort) {
 		
-		int s = sourcePort;
-		int d = destPort;
+		// -------------init -------------------------------------------
 		int[] dist = new int[n]; 			// array of distances
 		ArrayList<Vertex> priorityQueue = new ArrayList<Vertex>(); // Priority queue of Vertex objects
 		
@@ -122,16 +121,16 @@ public class Graph implements Program2{
 		
 		for (int i = 0; i<n; i++)
 		{
-			Vertex v = new Vertex (i, Integer.MAX_VALUE); // initialize new Vertex object with priority 0
+			Vertex v = new Vertex (i, Integer.MAX_VALUE); // initialize new Vertex object with priority infinity
 			priorityQueue.add(v);
 		}
+		
+		// -------------Loop------------------------------------------------
 		
 		while (priorityQueue.size() > 0)
 		{
 			// u = vertex in Q with the smallest distance in dist[]
 			int index_smallest_dist = priorityQueue.get(0).portNumber; // the port number of the first item in the priority queue
-			int smallest_dist = dist[index_smallest_dist]; // initialize the smallest distance to the distance from source to first element of the priority queue
-			
 			
 			if (index_smallest_dist == destPort)
 			{
@@ -155,7 +154,7 @@ public class Graph implements Program2{
 					{
 						dist[v] = alt;
 						//previousNodes[v] = u;
-						updatePriority(v, dist[v], priorityQueue); // update vertex v with a priority of dist[v]
+						updateTimePriority(v, dist[v], priorityQueue); // update vertex v with a priority of dist[v]
 					}
 				}
 			}
@@ -194,9 +193,8 @@ public class Graph implements Program2{
 	
 	
 	// updates the priority of a vertex in the priority queue
-	public void updatePriority(int v, int dist_v, ArrayList<Vertex> queue)
+	public void updateTimePriority(int v, int dist_v, ArrayList<Vertex> queue)
 	{
-		int vertex = v; 
 		int newPriority = dist_v;
 		int indexOfVertexToMove = -1;
 		ArrayList<Vertex> pq = queue;
@@ -221,7 +219,6 @@ public class Graph implements Program2{
 		{
 			new_vertex_index--; 
 			if (new_vertex_index <= 0) break;
-			
 		}
 		
 		pq.add(new_vertex_index, vertex_being_moved);
@@ -231,9 +228,133 @@ public class Graph implements Program2{
 	// The output of this function is an int which is the maximum capacity from source port to destination port 
 	// Do not change its parameters or return type.
 	public int findCapOptimalPath(int sourcePort, int destPort) {
-		return -1;
+		
+		//----------- init ---------------------------
+		int[] bottleNeck = new int[n]; 			// array of distances
+		ArrayList<Vertex> priorityQueue = new ArrayList<Vertex>(); // Priority queue of Vertex objects
+		
+		for (int i =0; i<n; i++)
+		{
+			bottleNeck[i]= 0;		// Initialize all bottleneck capacities to zero
+		
+ 		}
+		
+		bottleNeck[sourcePort] = Integer.MAX_VALUE; // Capacity from source to source is infinity
+		
+		for (int i = 0; i<n; i++)
+		{
+			Vertex v = new Vertex (i, 0); // initialize new Vertex object with priority 0
+			priorityQueue.add(v);
+		}
+		
+		
+		//-----------Loop------------------------
+		while (priorityQueue.size() > 0)
+		{
+			// u = vertex in Q with the smallest distance in dist[]
+			int index_greatest_capacity = priorityQueue.get(0).portNumber; // the port number of the first item in the priority queue
+			
+			if (index_greatest_capacity == destPort)
+			{
+				break;
+			}
+			
+			if (bottleNeck[index_greatest_capacity] != 0)
+			{
+				priorityQueue.remove(0); //remove the first element in the priority queue
+				
+				ArrayList <Integer> neighbors = getNeighbors(index_greatest_capacity); 
+				
+				int alt; // length of alternative route
+				for (int i = 0; i< neighbors.size(); i++)
+				{
+					int u = index_greatest_capacity;
+					int v = neighbors.get(i);
+					alt = getCapacity(u, v);// distance from u to neighbor(i)
+					if (alt > bottleNeck[v] && bottleNeck[u] > bottleNeck[v])
+					{
+						if (bottleNeck[u] == Integer.MAX_VALUE)
+						{
+							bottleNeck[v] = alt;
+						}
+						else 
+						{
+							if (bottleNeck [u] > alt)
+							{
+								bottleNeck[v] = alt;
+							}
+							else
+							{
+								bottleNeck[v] = bottleNeck[u];
+							}
+							
+						}
+						
+						updateCapacityPriority(v, bottleNeck[v], priorityQueue); // update vertex v with a priority of bottleNeck[v]
+					}
+				}
+			}
+		}
+		
+		return bottleNeck[destPort];
 	}
+	
+	// finds capacity between node u to node v
+		public int getCapacity (int start, int end) 
+		{
+			
+			int c = Integer.MAX_VALUE;
+			int row_index;
+			for (int i = 0; i < adjList.size(); i++)
+			{
+				if (adjList.get(i).get(0).sourceNode == start) // get the first Edge object in each row of the adjacency list
+				{
+					row_index = i; 
+					
+					for (int a = 0; a < adjList.get(row_index).size(); a++)
+					{
+						if (adjList.get(row_index).get(a).destNode == end)
+						{
+							c = adjList.get(row_index).get(a).capacity;
+						}
+					}
+				}
+			}
+			
+			return c;
+		}
 
+		public void updateCapacityPriority(int v, int capacity_v, ArrayList<Vertex> queue)
+		{
+			int newPriority = capacity_v;
+			int indexOfVertexToMove = -1;
+			ArrayList<Vertex> pq = queue;
+			
+			for (int i = 0; i<pq.size(); i++)
+			{
+				if (pq.get(i).portNumber == v)
+				{
+					indexOfVertexToMove = i;
+				}
+			}
+			
+			Vertex vertex_being_moved = pq.get(indexOfVertexToMove); // extract the vertex that needs to be moved up in the queue
+			vertex_being_moved.priority = newPriority; // update that vertex's priority
+			pq.remove(indexOfVertexToMove);	// remove the Vertex from the queue
+			
+			// calculate the index of where the Vertex should be moved
+			int new_vertex_index = pq.size(); 
+			
+			while (newPriority > pq.get(new_vertex_index-1).getPriority() )
+			{
+				new_vertex_index--; 
+				if (new_vertex_index <= 0) break;
+			}
+			
+			pq.add(new_vertex_index, vertex_being_moved);
+		}
+		
+		
 	// This function returns the neighboring ports of node.
 	// This function is used to test if you have contructed the graph correct.
 	public ArrayList<Integer> getNeighbors(int node) {
